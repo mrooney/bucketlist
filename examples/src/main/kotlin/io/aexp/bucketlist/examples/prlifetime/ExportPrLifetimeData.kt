@@ -6,6 +6,7 @@ import io.aexp.bucketlist.BucketListClient
 import io.aexp.bucketlist.data.Order
 import io.aexp.bucketlist.data.PullRequest
 import io.aexp.bucketlist.data.PullRequestActivity
+import io.aexp.bucketlist.data.PullRequestCommit
 import io.aexp.bucketlist.data.PullRequestState
 import io.aexp.bucketlist.examples.getBitBucketClient
 import io.aexp.bucketlist.examples.getBoxWhiskerPlotDataTable
@@ -117,7 +118,10 @@ object ExportPrLifetimeData {
                     client.getPrActivity(projKey, repoSlug, pr.id)
                             .flatMap({ page -> Observable.from(page.values) })
                             .toSortedList({ a1, a2 -> a1.createdAt.compareTo(a2.createdAt) })
-                            .map({ list -> PrSummary(pr, list) })
+                            .map({ list -> PrSummary(
+                                client.getPrCommits(projKey, repoSlug, pr.id).flatMap({ page -> Observable.from(page.values) }).toSortedList({ a1, a2 -> a1.createdAt.compareTo(a2.createdAt) }),
+                                pr, list)
+                            })
                 })
                 .groupBy({ summary -> summary.mondayOfWeekOfStart })
     }
@@ -130,9 +134,9 @@ object ExportPrLifetimeData {
     /**
      * Wrapper to bundle a PR with its activity
      */
-    data class PrSummary(val pr: PullRequest, val activity: List<PullRequestActivity>) {
+    data class PrSummary(val commits: Observable<List<PullRequestCommit>>, val pr: PullRequest, val activity: List<PullRequestActivity>) {
         val duration: Duration
-            get() = Duration.between(activity.first().createdAt, activity.last().createdAt)
+            get() = Duration.between(commits.last().createdAt, activity.last().createdAt)
 
         val mondayOfWeekOfStart: LocalDate
             get() = pr.createdAt.toLocalDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
