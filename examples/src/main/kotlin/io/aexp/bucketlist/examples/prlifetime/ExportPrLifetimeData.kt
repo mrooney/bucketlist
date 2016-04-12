@@ -136,7 +136,7 @@ object ExportPrLifetimeData {
      */
     data class PrSummary(val commits: Observable<List<PullRequestCommit>>, val pr: PullRequest, val activity: List<PullRequestActivity>) {
         val duration: Duration
-            get() = Duration.between(commits.last().createdAt, activity.last().createdAt)
+            get() = Duration.between(commits.toBlocking().first().last().createdAt, activity.last().createdAt)
 
         val mondayOfWeekOfStart: LocalDate
             get() = pr.createdAt.toLocalDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
